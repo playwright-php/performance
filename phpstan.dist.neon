@@ -1,0 +1,9 @@
+parameters:
+    level: 8
+    paths:
+        - src/
+    treatPhpDocTypesAsCertain: false
+    ignoreErrors:
+        -
+            message: '#^Trait Playwright\\Performance\\Test\\PerformanceAssertions is used zero times and is not analysed\.$#'
+            path: src/Test/PerformanceAssertions.php

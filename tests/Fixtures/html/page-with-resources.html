@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page With Resources</title>
+    <link rel="stylesheet" href="data:text/css;base64,Ym9keSB7IGZvbnQtZmFtaWx5OiBBcmlhbCwgc2Fucy1zZXJpZjsgfQ==">
+</head>
+<body>
+    <h1>Page With Resources</h1>
+    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23667eea'/%3E%3C/svg%3E" alt="Test image">
+    
+    <script src="data:text/javascript;base64,Y29uc29sZS5sb2coJ1Rlc3Qgc2NyaXB0IGxvYWRlZCcpOw=="></script>
+    <script>
+        // Simulate a blocking task
+        const start = performance.now();
+        while (performance.now() - start < 60) {
+            // Block for ~60ms to trigger TBT
+        }
+    </script>
+</body>
+</html>
