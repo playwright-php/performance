@@ -10,6 +10,11 @@
 
 # Playwright PHP - Performance
 
+> [!IMPORTANT]  
+> This package is **experimental**. Its API may still change before the upcoming `1.0` release.  
+>  
+> Curious or interested? Try it out, [share your feedback](https://github.com/playwright-php/performance/issues), or ideas!
+
 The Performance package helps you inspect how a page behaves in a real browser 
 by extracting Core Web Vitals and network timing data with a single API. 
 
