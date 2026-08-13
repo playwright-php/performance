@@ -1,133 +1,140 @@
 <div align="center">
-<img src="https://github.com/playwright-php/.github/raw/main/profile/playwright-php.png" alt="Playwright PHP" />
+<a href="https://github.com/playwright-php"><img src="https://github.com/playwright-php/.github/raw/main/profile/playwright-php.png" alt="Playwright PHP" /></a>
 
-&nbsp; ![PHP Version](https://img.shields.io/badge/PHP-8.2-05971B?labelColor=09161E&color=1D8D23&logoColor=FFFFFF)
+&nbsp; ![PHP Version](https://img.shields.io/badge/PHP-8.2+-05971B?labelColor=09161E&color=1D8D23&logoColor=FFFFFF)
 &nbsp; ![CI](https://img.shields.io/github/actions/workflow/status/playwright-php/performance/CI.yml?branch=main&label=Tests&color=1D8D23&labelColor=09161E&logoColor=FFFFFF)
-&nbsp; ![Release](https://img.shields.io/github/v/release/playwright-php/performance?label=Stable&labelColor=09161E&color=1D8D23&logoColor=FFFFFF)
+&nbsp; [![Release](https://img.shields.io/github/v/release/playwright-php/performance?label=Stable&labelColor=09161E&color=1D8D23&logoColor=FFFFFF)](https://packagist.org/packages/playwright-php/performance)
 &nbsp; ![License](https://img.shields.io/github/license/playwright-php/performance?label=License&labelColor=09161E&color=1D8D23&logoColor=FFFFFF)
 
 </div>
 
-# Playwright PHP - Performance
+# Playwright PHP Performance
 
-The Performance package helps you inspect how a page behaves in a real browser 
-by extracting Core Web Vitals and network timing data with a single API. 
+Collect Core Web Vitals and resource timing data from pages opened with Playwright PHP.
 
-## Features
-
-- Capture all Core Web Vitals directly from the browser with resilient fallbacks:
-    - **LCP** (Largest Contentful Paint) - Loading performance
-    - **FCP** (First Contentful Paint) - Initial render timing
-    - **CLS** (Cumulative Layout Shift) - Visual stability
-    - **INP** (Interaction to Next Paint) - Responsiveness (Core Web Vital as of 2024)
-    - **FID** (First Input Delay) - Input responsiveness
-    - **TTFB** (Time to First Byte) - Server response time
-    - **TBT** (Total Blocking Time) - Main thread blocking
-- Collect resource timing entries and expose them as value objects for downstream analysis.
-
-## Getting Started
-
-### Installation
+## Installation
 
 ```bash
 composer require --dev playwright-php/performance
+vendor/bin/playwright-install --browsers
 ```
 
-## Usage
+The package requires PHP 8.2+ and Playwright PHP 1.x.
+
+## Quick Start
+
+Navigate to a page, collect its metrics, and generate a report:
+
+```php
+<?php
+
+require __DIR__.'/vendor/autoload.php';
+
+use Playwright\Performance\Monitor\PerformanceMonitor;
+use Playwright\Performance\Reporter\JsonReporter;
+use Playwright\Playwright;
+
+$context = Playwright::chromium();
+$page = $context->newPage();
+$monitor = new PerformanceMonitor($page);
+
+$monitor->navigate('https://example.com');
+
+$vitals = $monitor->collectCoreWebVitals();
+$resources = $monitor->collectResourceMetrics();
+$report = (new JsonReporter())->generate($vitals, $resources);
+
+file_put_contents('performance.json', $report);
+
+$context->close();
+```
+
+`CoreWebVitals` exposes LCP, FCP, CLS, INP, FID, TTFB, and TBT as public readonly properties and through getter methods.
+
+Each `ResourceMetrics` value contains the URL, resource type, duration, transfer size, and detailed network timing values.
+
+## PHPUnit Assertions
+
+Use `PerformanceAssertions` with the core Playwright test case to enforce broad, stable budgets:
 
 ```php
 use Playwright\Performance\Monitor\PerformanceMonitor;
-use Playwright\Playwright;
+use Playwright\Performance\Test\PerformanceAssertions;
+use Playwright\Testing\PlaywrightTestCase;
 
-$browser = Playwright::chromium();
-$page = $browser->newPage();
-
-$monitor = new PerformanceMonitor($page);
-$monitor->navigate('https://example.com');
-
-$resources = $monitor->collectResourceMetrics();
-
-// Core Web Vitals
-$vitals = $monitor->collectCoreWebVitals();
-
-// Resource Metrics
-$resources = $monitor->collectResourceMetrics();
-
-$browser->close();
-```
-
-### Core Web Vitals
-
-```php
-// ...
-// $vitals = $monitor->collectCoreWebVitals();
-
-echo $vitals->lcp;   // Largest Contentful Paint (ms)
-echo $vitals->fcp;   // First Contentful Paint (ms)
-echo $vitals->cls;   // Cumulative Layout Shift
-echo $vitals->inp;   // Interaction to Next Paint (ms)
-echo $vitals->fid;   // First Input Delay
-echo $vitals->ttfb;  // Time to First Byte (ms)
-echo $vitals->tbt;   // Total Blocking Time (ms)
-```
-
-### Resources Loaded
-
-```php
-// ...
-// $resources = $monitor->collectResourceMetrics();
-
-foreach ($resources as $resource) {
-    echo $resource->toArray();
-}
-```
-
-### Format Results
-
-```php
-use Playwright\Performance\Reporter\JsonReporter;
-use Playwright\Performance\Reporter\MarkdownReporter;
-
-// ...
-// $resources = $monitor->collectResourceMetrics();
-
-// JSON (default)
-$reporter = new JsonReporter();
-file_put_contents('report.json', $reporter->generate($vitals, $resources));
-
-// Markdown
-$reporter = new MarkdownReporter();
-file_put_contents('report.md', $reporter->generate($vitals, $resources));
-```
-
-## Testing
-
-Use `MockPerformanceMonitor` to test your code without launching a browser:
-
-```php
-use Playwright\Performance\Monitor\MockPerformanceMonitor;
-use Playwright\Performance\Metrics\CoreWebVitals;
-
-class MyServiceTest extends TestCase
+final class HomepagePerformanceTest extends PlaywrightTestCase
 {
-    public function testPerformanceCheck(): void
-    {
-        $mock = new MockPerformanceMonitor();
+    use PerformanceAssertions;
 
-        // Define expected values (optional)
-        $mock->setCoreWebVitals(new CoreWebVitals(100.0, 50.0, 0.01, 0.0, 0.0, 80.0, 0.0));
-        $service = new MyService($mock);
-        
-        // No real browser is launched here
-        $service->analyzePerformance('https://example.com');
+    public function testHomepageBudgets(): void
+    {
+        $monitor = new PerformanceMonitor($this->page);
+        $monitor->navigate('https://example.com');
+
+        $vitals = $monitor->collectCoreWebVitals();
+        $resources = $monitor->collectResourceMetrics();
+
+        $this->assertLcpBelowThreshold($vitals, 2500);
+        $this->assertClsBelowThreshold($vitals, 0.1);
+        $this->assertResourceCountBelowThreshold($resources, 50);
     }
 }
 ```
 
-The package also includes a PHPUnit trait with performance assertions. See the 
-full documentation for details.
+Shared CI runners vary. Use budgets that detect meaningful regressions instead of asserting exact timings.
+
+## Reports
+
+`JsonReporter` produces structured JSON. `MarkdownReporter` produces a readable summary with Core Web Vitals and the slowest resources.
+
+```php
+use Playwright\Performance\Reporter\MarkdownReporter;
+
+$markdown = (new MarkdownReporter())->generate($vitals, $resources);
+file_put_contents('performance.md', $markdown);
+```
+
+## Testing Without a Browser
+
+`MockPerformanceMonitor` implements the same interface as the browser-backed monitor:
+
+```php
+use Playwright\Performance\Metrics\CoreWebVitals;
+use Playwright\Performance\Monitor\MockPerformanceMonitor;
+
+$monitor = new MockPerformanceMonitor();
+$monitor->setCoreWebVitals(new CoreWebVitals(
+    lcp: 1000.0,
+    fcp: 500.0,
+    cls: 0.05,
+    inp: 0.0,
+    fid: 0.0,
+    ttfb: 100.0,
+    tbt: 0.0,
+));
+```
+
+## Limits
+
+- Automated browser metrics are laboratory data, not real-user monitoring.
+- INP and FID require user interaction and may remain zero in page-load tests.
+- Browser and runner variance can make narrow timing thresholds unreliable.
+
+## Documentation
+
+- [Playwright PHP Getting Started](https://github.com/playwright-php/playwright/blob/main/docs/guide/getting-started.md)
+
+## Contributing
+
+Contributions are welcome. Before submitting a pull request, run:
+
+```bash
+composer validate --strict
+vendor/bin/php-cs-fixer fix --dry-run --diff
+vendor/bin/phpstan analyse
+vendor/bin/phpunit
+```
 
 ## License
 
-This package is released by the [Playwright PHP](https://playwright-php.dev) 
-project under the MIT License. See the [LICENSE](LICENSE) file for details.
+Playwright PHP Performance is released under the [MIT License](LICENSE).
